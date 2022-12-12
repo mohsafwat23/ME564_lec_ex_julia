@@ -14,112 +14,127 @@ macro bind(def, element)
     end
 end
 
-# ╔═╡ 7750d53d-d35e-4057-a599-086696b09264
+# ╔═╡ 6c46a9d8-46a4-11ed-1645-b3a4dd15fc41
+using LinearAlgebra
+
+# ╔═╡ 50f794b6-ecf2-427c-8777-5db71661fd9c
 using Plots
 
-# ╔═╡ f70b736e-b69e-4e97-b7e0-169c6fbefa2b
-using TaylorSeries
-
-# ╔═╡ b85d3050-41ac-11ed-17ba-2b8aced95773
-md""" 
-### Frst order ODE:
-
-$\frac{dx}{dt}=ẋ=\lambda x$
-#### Solution:
-
-$x(t)=e^{\lambda t}x(0)$
-"""
-
-# ╔═╡ 473732a9-6aa9-4d2b-8427-8d440d7108ce
+# ╔═╡ ea74687e-9017-4f0c-9d4c-e780e307a376
 md"""
-### λ > 0
+### Mass Spring Damper system
+Equation can be derived from Newton's Second Law (F=ma)
+
+$ẍ+ζẋ+ω^2x=0$
+and the characteristic equation is:
+
+$λ^2+ζλ+ω^2=0$
+where ζ = d/m and ω² = k/m
 """
 
-# ╔═╡ 20a0b04b-960b-4659-b889-1400bf3ed033
-begin
-	x0 = 1000
-	x(t; λ) = x0*exp(t*λ) 
-	plot(t -> x(t, λ=0.4), 0, 10, labels="x(t)")	
+# ╔═╡ 1a308ad7-0f4e-47e0-b191-18e4e6eecfd7
+md"""
+#### The following is the a Dynamics function of the mass-spring-damper system.
+"""
+
+# ╔═╡ 7e48fea3-bb7a-418a-a231-c66bc19891b4
+md"""
+#### Explicit first-order integrator (Forward Euler) 
+"""
+
+# ╔═╡ 6008c4ac-6c8f-4c0e-bd30-4901097713ce
+function forward_euler(fun, x0, Tf, dt)
+    t = Array(range(0, Tf, step=dt))
+    x_data = zeros(length(x0), length(t))
+    x_data[:,1] .= x0
+
+    for k=1:(length(t)-1)
+        x_data[:,k+1] .= x_data[:,k] + dt*fun(x_data[:,k]) # x_k+1 = x_k + f(x_x)*dt
+    end
+    
+    return x_data, t
 end
 
-# ╔═╡ 05e6bd46-1d53-42ca-8b50-8503ffe10e4b
+# ╔═╡ 0a9519ac-b39e-40fb-805e-60194ca5600d
 md"""
-### λ < 0
+#### Explicit 4th-order integrator (RK4)
+##### Note: this is not the same as ODE45 in Matlab
 """
 
-# ╔═╡ 06637ce1-31f9-4dc4-bc2c-9e11d6b3f013
-plot(t -> x(t, λ=-0.4), 0, 10, labels="x(t)")	
+# ╔═╡ 8ae84c27-6c46-48b8-a537-85e1e0ad29ac
+function RK4(fun, x0, Tf, dt)
+    t = Array(range(0, Tf, step=dt))
+    x_data = zeros(length(x0), length(t))
+    x_data[:,1] .= x0
 
-
-# ╔═╡ 54cf82d6-6190-4d70-ba67-035ad7db3607
-md"""
-### What is the Euler number "e"?
-#### Think of it as an interest rate that is compounded in an infinitesimally small amount of time.
-"""
-
-# ╔═╡ b5518567-b553-4be9-837a-50300b803980
-n_slider = @bind n html"<input type=range min=1 max=10000 step=10 value=1>"
-
-# ╔═╡ c160fa3b-15e8-462c-b433-efd0b5b84b2a
-begin
-	r = 1.0
-	#x0 = 1000
-	x1 = x0*(1 + r/n)^n 
+    for k=1:(length(t)-1)
+        k1 = fun(x_data[:,k])
+        k2 = fun(x_data[:,k] + 0.5*dt*k1)
+        k3 = fun(x_data[:,k] + 0.5*dt*k2)
+        k4 = fun(x_data[:,k] + dt*k3)
+        x_data[:,k+1] .= x_data[:,k] + (dt/6.0)*(k1 + 2*k2 + 2*k3 + k4)
+    end
+    
+    return x_data, t
 end
 
-# ╔═╡ 04822c9a-4f1d-4ab2-b151-ef0ec4a85c99
-x0*exp(r)
+# ╔═╡ e805945f-0ac4-4adc-9561-aa5ecb1376fb
+damp_slider = @bind d html"<input type=range min=0.01 max=5.0 step=0.1 value=0.25>"
 
-# ╔═╡ 41fb4c25-61ef-4bd2-be2b-defe8d521803
-md"""
-$e^r = \lim\limits_{n \to \infty} (1 + \frac{r}{n})^n$
-
-"""
-
-# ╔═╡ ad594a53-496e-45a2-9327-6bc1c816c82d
-md"""
-### "e" can also be derived with the power series
-$x(t)=λ(c_0 + c_1t + c_2t^2 + c_3t^3 + ... c_nt^n)$
-$ẋ(t)=c_1 + 2c_2t + 3c_3t^2 + ... nc_nt^{n-1}$
-### and equate coefficients and find $e^{\lambda t}$:
-$e^{λt}=1 + λt + \frac{λ^2t^2}{2!} + \frac{λ^3t^3}{3!} + ...$
-"""
-
-# ╔═╡ 55cf8cb4-2b89-4630-8e07-989b3f4785ed
-power_slider = @bind power html"<input type=range min=0 max=15 step=1 value=1>"
-
-# ╔═╡ d4f9194b-c5c5-4477-89b6-059c055784a3
+# ╔═╡ a9abe0d5-a449-4f59-a804-73b114db9950
 begin
-	t_ser = Taylor1(Float64, power)
-	e_approx = exp(t_ser)
-	plot(t -> e_approx(t), 0, 10, labels="Taylor $power")
-	plot!(t -> exp(t), 0, 10, labels="eᵗ")
-
+	m = 0.1 # mass
+	ω = 2*pi # natural frequency
+	#d = 0.25 # damping constant
+	ζ = d/m
 end
 
-# ╔═╡ a8d1fd49-c301-4a55-984c-c734a1ef5628
+# ╔═╡ 1dd414f4-b468-40f9-bf7f-5e952f1fa9c8
+function mass_spring_damp(xF)
+	x = xF[1] # position
+	ẋ = xF[2] # velocity
+	ẍ = -ω^2*x - ζ*ẋ # accel
+	return [ẋ; ẍ]
+end
+
+# ╔═╡ 34c9b7ec-b888-4426-92c7-5d776e269a0c
+begin
+	A = [0 1; -ω^2 -ζ]
+	λ₁, λ₂ = eigvals(A)
+	x(t) = exp(λ₁*t) + exp(λ₂*t)
+end
+
+# ╔═╡ 5bbad628-5579-4090-be90-2a062f4f2ad4
+dt_slider = @bind dt html"<input type=range min=0.001 max=0.1 step=0.001 value=0.01>"
+
+# ╔═╡ e723958a-202f-4b1c-b578-26bab69cd494
 md"""
-### Maclaurin Series: 
+damp = $d
+
+dt = $dt
 """
 
-# ╔═╡ 2668016c-1d10-417f-831b-59d21f829cca
+# ╔═╡ 468b650c-08c0-49c1-aae8-f62a1e5164bd
 begin
-	sin_approx = sin(t_ser)
-	plot(t -> sin_approx(t), -8, 8, labels="Taylor $power")
-	plot!(t -> sin(t), -8, 8, labels="sin(t)")
-	plot!(ylims=(-1.5,1.5))
-
+	x0 = [2; 0]
+	x_data, t_data = forward_euler(mass_spring_damp, x0, 10, dt)
+	x_data_2, t_data_2 = RK4(mass_spring_damp, x0, 10, dt)
+	plot(t_data, x_data[1,:], xlabel="time[s]", ylabel="postion[m]", label="Forward Euler")
+	plot!(t_data_2, x_data_2[1,:], label="RK4")
+	plot!(t -> x(t), label="Analytic")
 end
+
+# ╔═╡ 174acb22-f753-479a-a740-deaee569d4dc
+x_data_2
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
+LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
-TaylorSeries = "6aa5eb33-94cf-58f4-a9d0-e4b2c4fc25ea"
 
 [compat]
-Plots = "~1.34.3"
-TaylorSeries = "~0.12.2"
+Plots = "~1.35.3"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -196,9 +211,9 @@ version = "0.12.8"
 
 [[Compat]]
 deps = ["Dates", "LinearAlgebra", "UUIDs"]
-git-tree-sha1 = "5856d3031cdb1f3b2b6340dfdc66b6d9a149a374"
+git-tree-sha1 = "3ca828fe1b75fa84b021a7860bd039eaea84d2f2"
 uuid = "34da2185-b29b-5c13-b0c7-acf172513d20"
-version = "4.2.0"
+version = "4.3.0"
 
 [[CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
@@ -210,9 +225,9 @@ uuid = "d38c429a-6771-53c6-b99e-75d170b6e991"
 version = "0.6.2"
 
 [[DataAPI]]
-git-tree-sha1 = "1106fa7e1256b402a86a8e7b15c00c85036fef49"
+git-tree-sha1 = "46d2680e618f8abd007bce0c3026cb0c4a8f2032"
 uuid = "9a962f9c-6df0-11e9-0e5d-c546b8b5ee8a"
-version = "1.11.0"
+version = "1.12.0"
 
 [[DataStructures]]
 deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
@@ -294,9 +309,9 @@ version = "3.3.8+0"
 
 [[GR]]
 deps = ["Base64", "DelimitedFiles", "GR_jll", "HTTP", "JSON", "Libdl", "LinearAlgebra", "Pkg", "Preferences", "Printf", "Random", "Serialization", "Sockets", "Test", "UUIDs"]
-git-tree-sha1 = "2c5ab2c1e683d991300b125b9b365cb0a0035d88"
+git-tree-sha1 = "cf7bf90e483228f6c988e474b420064e5351b892"
 uuid = "28b8d3ca-fb5f-59d9-8090-bfdbd6d07a71"
-version = "0.69.1"
+version = "0.69.4"
 
 [[GR_jll]]
 deps = ["Artifacts", "Bzip2_jll", "Cairo_jll", "FFMPEG_jll", "Fontconfig_jll", "GLFW_jll", "JLLWrappers", "JpegTurbo_jll", "Libdl", "Libtiff_jll", "Pixman_jll", "Pkg", "Qt5Base_jll", "Zlib_jll", "libpng_jll"]
@@ -350,9 +365,9 @@ uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 
 [[InverseFunctions]]
 deps = ["Test"]
-git-tree-sha1 = "b3364212fb5d870f724876ffcd34dd8ec6d98918"
+git-tree-sha1 = "49510dfcb407e572524ba94aeae2fced1f3feb0f"
 uuid = "3587e190-3f89-42d0-90ee-14403ec27112"
-version = "0.1.7"
+version = "0.1.8"
 
 [[IrrationalConstants]]
 git-tree-sha1 = "7fd44fd4ff43fc60815f8e764c0f352b83c49151"
@@ -500,9 +515,9 @@ version = "0.4.9"
 
 [[MacroTools]]
 deps = ["Markdown", "Random"]
-git-tree-sha1 = "3d3e902b31198a27340d0bf00d6ac452866021cf"
+git-tree-sha1 = "42324d08725e200c23d4dfb549e0d5d89dede2d2"
 uuid = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
-version = "0.5.9"
+version = "0.5.10"
 
 [[Markdown]]
 deps = ["Base64"]
@@ -556,9 +571,9 @@ uuid = "05823500-19ac-5b8b-9628-191a04bc5112"
 
 [[OpenSSL]]
 deps = ["BitFlags", "Dates", "MozillaCACerts_jll", "OpenSSL_jll", "Sockets"]
-git-tree-sha1 = "02be9f845cb58c2d6029a6d5f67f4e0af3237814"
+git-tree-sha1 = "ebe81469e9d7b471d7ddb611d9e147ea16de0add"
 uuid = "4d8831e6-92b7-49fb-bdf8-b643e874388c"
-version = "1.1.3"
+version = "1.2.1"
 
 [[OpenSSL_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -622,9 +637,9 @@ version = "1.3.1"
 
 [[Plots]]
 deps = ["Base64", "Contour", "Dates", "Downloads", "FFMPEG", "FixedPointNumbers", "GR", "JLFzf", "JSON", "LaTeXStrings", "Latexify", "LinearAlgebra", "Measures", "NaNMath", "Pkg", "PlotThemes", "PlotUtils", "Printf", "REPL", "Random", "RecipesBase", "RecipesPipeline", "Reexport", "RelocatableFolders", "Requires", "Scratch", "Showoff", "SnoopPrecompile", "SparseArrays", "Statistics", "StatsBase", "UUIDs", "UnicodeFun", "Unzip"]
-git-tree-sha1 = "fae3b66e343703f8f89b854a4da40bce0f84da22"
+git-tree-sha1 = "524d9ff1b2f4473fef59678c06f9f77160a204b1"
 uuid = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
-version = "1.34.3"
+version = "1.35.3"
 
 [[Preferences]]
 deps = ["TOML"]
@@ -658,9 +673,9 @@ version = "1.3.0"
 
 [[RecipesPipeline]]
 deps = ["Dates", "NaNMath", "PlotUtils", "RecipesBase"]
-git-tree-sha1 = "e7eac76a958f8664f2718508435d058168c7953d"
+git-tree-sha1 = "017f217e647cf20b0081b9be938b78c3443356a0"
 uuid = "01d81517-befc-4cb6-b9ec-a95719d0359c"
-version = "0.6.3"
+version = "0.6.6"
 
 [[Reexport]]
 git-tree-sha1 = "45e428421666073eab6f2da5c9d310d99bb12f9b"
@@ -749,12 +764,6 @@ uuid = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 [[Tar]]
 deps = ["ArgTools", "SHA"]
 uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
-
-[[TaylorSeries]]
-deps = ["LinearAlgebra", "Markdown", "Requires", "SparseArrays"]
-git-tree-sha1 = "87baeec9ad6273ed8040a93fbbbaa039fa955f1f"
-uuid = "6aa5eb33-94cf-58f4-a9d0-e4b2c4fc25ea"
-version = "0.12.2"
 
 [[TensorCore]]
 deps = ["LinearAlgebra"]
@@ -1019,22 +1028,21 @@ version = "1.4.1+0"
 """
 
 # ╔═╡ Cell order:
-# ╠═7750d53d-d35e-4057-a599-086696b09264
-# ╠═f70b736e-b69e-4e97-b7e0-169c6fbefa2b
-# ╠═b85d3050-41ac-11ed-17ba-2b8aced95773
-# ╟─473732a9-6aa9-4d2b-8427-8d440d7108ce
-# ╠═20a0b04b-960b-4659-b889-1400bf3ed033
-# ╟─05e6bd46-1d53-42ca-8b50-8503ffe10e4b
-# ╠═06637ce1-31f9-4dc4-bc2c-9e11d6b3f013
-# ╟─54cf82d6-6190-4d70-ba67-035ad7db3607
-# ╠═c160fa3b-15e8-462c-b433-efd0b5b84b2a
-# ╠═04822c9a-4f1d-4ab2-b151-ef0ec4a85c99
-# ╠═b5518567-b553-4be9-837a-50300b803980
-# ╟─41fb4c25-61ef-4bd2-be2b-defe8d521803
-# ╟─ad594a53-496e-45a2-9327-6bc1c816c82d
-# ╠═d4f9194b-c5c5-4477-89b6-059c055784a3
-# ╟─55cf8cb4-2b89-4630-8e07-989b3f4785ed
-# ╟─a8d1fd49-c301-4a55-984c-c734a1ef5628
-# ╠═2668016c-1d10-417f-831b-59d21f829cca
+# ╠═6c46a9d8-46a4-11ed-1645-b3a4dd15fc41
+# ╠═50f794b6-ecf2-427c-8777-5db71661fd9c
+# ╟─ea74687e-9017-4f0c-9d4c-e780e307a376
+# ╠═a9abe0d5-a449-4f59-a804-73b114db9950
+# ╟─1a308ad7-0f4e-47e0-b191-18e4e6eecfd7
+# ╠═1dd414f4-b468-40f9-bf7f-5e952f1fa9c8
+# ╠═34c9b7ec-b888-4426-92c7-5d776e269a0c
+# ╟─7e48fea3-bb7a-418a-a231-c66bc19891b4
+# ╠═6008c4ac-6c8f-4c0e-bd30-4901097713ce
+# ╟─0a9519ac-b39e-40fb-805e-60194ca5600d
+# ╠═8ae84c27-6c46-48b8-a537-85e1e0ad29ac
+# ╠═e723958a-202f-4b1c-b578-26bab69cd494
+# ╠═e805945f-0ac4-4adc-9561-aa5ecb1376fb
+# ╟─5bbad628-5579-4090-be90-2a062f4f2ad4
+# ╠═468b650c-08c0-49c1-aae8-f62a1e5164bd
+# ╠═174acb22-f753-479a-a740-deaee569d4dc
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.12
+# v0.19.16
 
 using Markdown
 using InteractiveUtils
@@ -14,123 +14,155 @@ macro bind(def, element)
     end
 end
 
-# ╔═╡ 6c46a9d8-46a4-11ed-1645-b3a4dd15fc41
+# ╔═╡ bd84330e-4c41-11ed-1f68-2bbeae7faa88
 using LinearAlgebra
 
-# ╔═╡ 50f794b6-ecf2-427c-8777-5db71661fd9c
+# ╔═╡ ebba3928-b4a1-459c-bee3-1d345d91e454
 using Plots
 
-# ╔═╡ ea74687e-9017-4f0c-9d4c-e780e307a376
+# ╔═╡ 889fdced-5b36-4369-a924-a9096d40e968
 md"""
-### Mass Spring Damper system
-Equation can be derived from Newton's Second Law (F=ma)
+Want to "diagonalize", $ẋ=Ax$, so that the dynamics are decoupled
 
-$ẍ+ζẋ+ω^2x=0$
-and the characteristic equation is:
+e.g.
 
-$λ^2+ζλ+ω^2=0$
-where ζ = d/m and ω² = k/m
+$$\begin{bmatrix} ẋ_1 \\ ẋ_2 \\ ẋ_3 \end{bmatrix} = \begin{bmatrix} λ_1 & 0 & 0 \\ 0 & λ_2 & 0 \\ 0 & 0 & λ_3 \end{bmatrix} \begin{bmatrix} x_1 \\ x_2 \\ x_3 \end{bmatrix}$$
+
+Why?
+
+Because we already have a solution for a decoupled dynamical system in the form of:
+
+$$x(t)=e^{\lambda t}x(0)$$
+
+By doing a change of coordinates (linear transformation) $x=Tz$, we can achieve this diagonalization of A, and that's where the Eigenvalue and Eigenvectors come in!
+
+$$AT=TD$$
+
+where T has columns of eigenvectors of A stacked together, and D is the diagonal elements of the eigenvalues of A
 """
 
-# ╔═╡ 1a308ad7-0f4e-47e0-b191-18e4e6eecfd7
+# ╔═╡ 8a9779ad-6e9f-4a91-987c-dc73355b8f7c
 md"""
-#### The following is the a Dynamics function of the mass-spring-damper system.
+From the Taylor expansion of $e^{At}$,
+$$e^{At} = I + At + \frac{A^2}{2!}t^2 + \frac{A^3}{3!}t^3 + ...$$ and $A^N = TD^NT^{-1}$, we obtain a solution to the linear differential equation in terms of eigenvalues and eigenvectors, 
+$$x(t)=Te^{Dt}T^{-1}x(0)$$
 """
 
-# ╔═╡ 7e48fea3-bb7a-418a-a231-c66bc19891b4
+# ╔═╡ 3dcbc552-d179-4c95-b458-e20e63e132f7
 md"""
-#### Explicit first-order integrator (Forward Euler) 
+### Visual interpretation of Eigenvalues and Eigenvectors
+
+Think of it as what vectors can be transformed by a matrix A, and the result of this transformation is only a scalar, λ, multiplication of that vector (no orientation change).
+
+$$Ax=λx$$
 """
 
-# ╔═╡ 6008c4ac-6c8f-4c0e-bd30-4901097713ce
-function forward_euler(fun, x0, Tf, dt)
-    t = Array(range(0, Tf, step=dt))
-    x_data = zeros(length(x0), length(t))
-    x_data[:,1] .= x0
+# ╔═╡ 2594b2fd-f426-4804-8aad-a4ce6eea790e
+theta_slider = @bind θ html"<input type=range min=0.0 max=6.2832 step=0.001 value=0.25>"
 
-    for k=1:(length(t)-1)
-        x_data[:,k+1] .= x_data[:,k] + dt*fun(x_data[:,k]) # x_k+1 = x_k + f(x_x)*dt
-    end
-    
-    return x_data, t
-end
-
-# ╔═╡ 0a9519ac-b39e-40fb-805e-60194ca5600d
-md"""
-#### Explicit 4th-order integrator (RK4)
-##### Note: this is not the same as ODE45 in Matlab
-"""
-
-# ╔═╡ 8ae84c27-6c46-48b8-a537-85e1e0ad29ac
-function RK4(fun, x0, Tf, dt)
-    t = Array(range(0, Tf, step=dt))
-    x_data = zeros(length(x0), length(t))
-    x_data[:,1] .= x0
-
-    for k=1:(length(t)-1)
-        k1 = fun(x_data[:,k])
-        k2 = fun(x_data[:,k] + 0.5*dt*k1)
-        k3 = fun(x_data[:,k] + 0.5*dt*k2)
-        k4 = fun(x_data[:,k] + dt*k3)
-        x_data[:,k+1] .= x_data[:,k] + (dt/6.0)*(k1 + 2*k2 + 2*k3 + k4)
-    end
-    
-    return x_data, t
-end
-
-# ╔═╡ e805945f-0ac4-4adc-9561-aa5ecb1376fb
-damp_slider = @bind d html"<input type=range min=0.01 max=5.0 step=0.1 value=0.25>"
-
-# ╔═╡ a9abe0d5-a449-4f59-a804-73b114db9950
+# ╔═╡ 6376137d-66f5-407a-94cd-1ce283555b21
 begin
-	m = 0.1 # mass
-	ω = 2*pi # natural frequency
-	#d = 0.25 # damping constant
-	ζ = d/m
+	A = [3. -1.; -1. 3.]
+	n = norm.(eachcol(A))
+	A = A ./n
+	x = [cos(θ),sin(θ)]
+	x′ = A*x
+
+	T = eigvecs(A)
+
+	if (abs(cos(θ)) > (abs(T[1,1]) - 0.025) && abs(cos(θ)) < (abs(T[1,1]) + 0.025))
+		print("You are on or close to an eigenvector!")
+	end
+	area(x1, y1, x2, y2, x, y) = Shape(x .+ [0,x2,x1+x2,x1], y .+ [0,y2,y1+y2,y1])
+	
+	plot(area(x[1], x[2], x′[1], x′[2], 0, 0), opacity=.5, label="determinant")
+
+	quiver!(zeros(4), zeros(4) ,
+		quiver=([ A[1,1], A[2,1], x[1], x′[1] ], [ A[1,2], A[2,2], x[2], x′[2] ]),    xlim = [-1, 1],
+		ylim = [-1, 1],
+		xlabel = "x1",
+		ylabel = "x2")
 end
 
-# ╔═╡ 1dd414f4-b468-40f9-bf7f-5e952f1fa9c8
-function mass_spring_damp(xF)
-	x = xF[1] # position
-	ẋ = xF[2] # velocity
-	ẍ = -ω^2*x - ζ*ẋ # accel
-	return [ẋ; ẍ]
-end
-
-# ╔═╡ 34c9b7ec-b888-4426-92c7-5d776e269a0c
-begin
-	A = [0 1; -ω^2 -ζ]
-	λ₁, λ₂ = eigvals(A)
-	x(t) = exp(λ₁*t) + exp(λ₂*t)
-end
-
-# ╔═╡ 5bbad628-5579-4090-be90-2a062f4f2ad4
-dt_slider = @bind dt html"<input type=range min=0.001 max=0.1 step=0.001 value=0.01>"
-
-# ╔═╡ e723958a-202f-4b1c-b578-26bab69cd494
+# ╔═╡ de415f11-b418-4597-99ec-897e8ed9a49c
 md"""
-damp = $d
-
-dt = $dt
+### Compute the eigen(values & vectors) in julia using the linearalgebra package
 """
 
-# ╔═╡ 468b650c-08c0-49c1-aae8-f62a1e5164bd
+# ╔═╡ 2cbc1a61-9eca-4000-bd8c-fc667222c4c7
 begin
-	x0 = [2; 0]
-	x_data, t_data = forward_euler(mass_spring_damp, x0, 10, dt)
-	x_data_2, t_data_2 = RK4(mass_spring_damp, x0, 10, dt)
-	plot(t_data, x_data[1,:], xlabel="time[s]", ylabel="postion[m]", label="Forward Euler")
-	plot!(t_data_2, x_data_2[1,:], label="RK4")
-	plot!(t -> x(t), label="Analytic")
+	#T = eigvecs(A)
+	#A = [0 1; 1 -0.1]
+	λ = eigvals(A)
+	D = zeros(length(λ), length(λ))
+	D[1,1] = λ[1]
+	D[2,2] = λ[2]
 end
+
+# ╔═╡ 6d0bbb9d-f236-4309-9e9b-6338b267863b
+T
+
+# ╔═╡ 6f7bd6b7-aada-4137-97fc-6d417e4b89b9
+md"""
+### Stability analysis
+"""
+
+# ╔═╡ 3eb6dfcb-def9-4df3-aec3-603627ee868c
+c_slider = @bind c html"<input type=range min=1.0 max=40.0 step=1.0 value=12.0>"
+
+# ╔═╡ 1c0ef85b-4332-4608-bc1e-9e18817ca7eb
+begin
+	import GR
+	gr()
+	function f(X)
+		x1, x2 = X
+		return [x2, 0.01*x2 - x1 + x1^3]#[3*x1 - x2, -x1 + 3*x2]
+	end
+
+	xgr = range(-1.5, 1.5; length= c)
+	ygr = range(-1.5, 1.5; length= c)
+	
+	X = ones(c)' .* ygr
+	Y = xgr' .* ones(c)
+	u = zeros(c,c)
+	v = zeros(c,c)
+	for i in 1:c
+		for j in 1:c
+			xij = X[i,j]
+			yij = Y[i,j]
+			xprime = f([xij,yij])
+			u[i,j] = xprime[1]
+			v[i,j] = xprime[2]
+
+		end
+	end
+
+	xall = collect(range(-10, 10, length= 100))
+
+	#norm = (f([xij,yij], 0).^2 .+ 1.0^2).^0.5;
+	#U = c*ones(size(X))./norm;
+	#V = c*f(X, Y)./norm; 
+
+	quiver(X, Y, quiver=(u, v), aspect_ratio=:equal, color="red", xlim = [-3, 3],
+		ylim = [-3, 3], xlabel="x1", ylabel="x2")
+	plot!(xall, T[1,1]/T[1,2]*xall, label = "λ₁", legend = :topright, color="black")
+	plot!(xall, T[2,1]/T[2,2]*xall, label = "λ₂", legend = :topright, color="blue")
+end
+
+# ╔═╡ b57c7047-14d3-4899-ba77-af4583b0696a
+md"""
+As you can visualize in the phase portrait, the vectors are pointing outward because the eigenvalues are positive. As a result, the dynamical system is unstable (vectors don't shrink to 0).
+"""
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
+GR = "28b8d3ca-fb5f-59d9-8090-bfdbd6d07a71"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
 
 [compat]
+GR = "~0.69.5"
 Plots = "~1.35.3"
 """
 
@@ -217,9 +249,10 @@ deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
 
 [[Contour]]
-git-tree-sha1 = "d05d9e7b7aedff4e5b51a029dced05cfb6125781"
+deps = ["StaticArrays"]
+git-tree-sha1 = "9f02045d934dc030edad45944ea80dbd1f0ebea7"
 uuid = "d38c429a-6771-53c6-b99e-75d170b6e991"
-version = "0.6.2"
+version = "0.5.7"
 
 [[DataAPI]]
 git-tree-sha1 = "46d2680e618f8abd007bce0c3026cb0c4a8f2032"
@@ -242,9 +275,9 @@ uuid = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 
 [[DocStringExtensions]]
 deps = ["LibGit2"]
-git-tree-sha1 = "5158c2b41018c5f7eb1470d558127ac274eca0c9"
+git-tree-sha1 = "b19534d1895d702889b219c382a6e18010797f0b"
 uuid = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
-version = "0.9.1"
+version = "0.8.6"
 
 [[Downloads]]
 deps = ["ArgTools", "LibCURL", "NetworkOptions"]
@@ -306,9 +339,9 @@ version = "3.3.8+0"
 
 [[GR]]
 deps = ["Base64", "DelimitedFiles", "GR_jll", "HTTP", "JSON", "Libdl", "LinearAlgebra", "Pkg", "Preferences", "Printf", "Random", "Serialization", "Sockets", "Test", "UUIDs"]
-git-tree-sha1 = "cf7bf90e483228f6c988e474b420064e5351b892"
+git-tree-sha1 = "00a9d4abadc05b9476e937a5557fcce476b9e547"
 uuid = "28b8d3ca-fb5f-59d9-8090-bfdbd6d07a71"
-version = "0.69.4"
+version = "0.69.5"
 
 [[GR_jll]]
 deps = ["Artifacts", "Bzip2_jll", "Cairo_jll", "FFMPEG_jll", "Fontconfig_jll", "GLFW_jll", "JLLWrappers", "JpegTurbo_jll", "Libdl", "Libtiff_jll", "Pixman_jll", "Pkg", "Qt5Base_jll", "Zlib_jll", "libpng_jll"]
@@ -341,9 +374,9 @@ version = "1.0.2"
 
 [[HTTP]]
 deps = ["Base64", "CodecZlib", "Dates", "IniFile", "Logging", "LoggingExtras", "MbedTLS", "NetworkOptions", "OpenSSL", "Random", "SimpleBufferStream", "Sockets", "URIs", "UUIDs"]
-git-tree-sha1 = "4abede886fcba15cd5fd041fef776b230d004cee"
+git-tree-sha1 = "e8c58d5f03b9d9eb9ed7067a2f34c7c371ab130b"
 uuid = "cd3eb016-35fb-5094-929b-558a96fad6f3"
-version = "1.4.0"
+version = "1.4.1"
 
 [[HarfBuzz_jll]]
 deps = ["Artifacts", "Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "Graphite2_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Pkg"]
@@ -601,9 +634,9 @@ uuid = "efcefdf7-47ab-520b-bdef-62a2eaa19f15"
 
 [[Parsers]]
 deps = ["Dates"]
-git-tree-sha1 = "3d5bf43e3e8b412656404ed9466f1dcbf7c50269"
+git-tree-sha1 = "6c01a9b494f6d2a9fc180a08b182fcb06f0958a0"
 uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
-version = "2.4.0"
+version = "2.4.2"
 
 [[Pipe]]
 git-tree-sha1 = "6842804e7867b115ca9de748a0cf6b364523c16d"
@@ -622,9 +655,9 @@ uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 
 [[PlotThemes]]
 deps = ["PlotUtils", "Statistics"]
-git-tree-sha1 = "8162b2f8547bc23876edd0c5181b27702ae58dce"
+git-tree-sha1 = "1f03a2d339f42dca4a4da149c7e15e9b896ad899"
 uuid = "ccf2f8ad-2431-5c83-bf29-c5338b663b6a"
-version = "3.0.0"
+version = "3.1.0"
 
 [[PlotUtils]]
 deps = ["ColorSchemes", "Colors", "Dates", "Printf", "Random", "Reexport", "SnoopPrecompile", "Statistics"]
@@ -650,9 +683,9 @@ uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 
 [[Qt5Base_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Fontconfig_jll", "Glib_jll", "JLLWrappers", "Libdl", "Libglvnd_jll", "OpenSSL_jll", "Pkg", "Xorg_libXext_jll", "Xorg_libxcb_jll", "Xorg_xcb_util_image_jll", "Xorg_xcb_util_keysyms_jll", "Xorg_xcb_util_renderutil_jll", "Xorg_xcb_util_wm_jll", "Zlib_jll", "xkbcommon_jll"]
-git-tree-sha1 = "c6c0f690d0cc7caddb74cef7aa847b824a16b256"
+git-tree-sha1 = "0c03844e2231e12fda4d0086fd7cbe4098ee8dc5"
 uuid = "ea2cea3b-5b76-57ae-a6ef-0a8af62496e1"
-version = "5.15.3+1"
+version = "5.15.3+2"
 
 [[REPL]]
 deps = ["InteractiveUtils", "Markdown", "Sockets", "Unicode"]
@@ -669,10 +702,10 @@ uuid = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 version = "1.3.0"
 
 [[RecipesPipeline]]
-deps = ["Dates", "NaNMath", "PlotUtils", "RecipesBase"]
-git-tree-sha1 = "017f217e647cf20b0081b9be938b78c3443356a0"
+deps = ["Dates", "NaNMath", "PlotUtils", "RecipesBase", "SnoopPrecompile"]
+git-tree-sha1 = "9b1c0c8e9188950e66fc28f40bfe0f8aac311fe0"
 uuid = "01d81517-befc-4cb6-b9ec-a95719d0359c"
-version = "0.6.6"
+version = "0.6.7"
 
 [[Reexport]]
 git-tree-sha1 = "45e428421666073eab6f2da5c9d310d99bb12f9b"
@@ -737,6 +770,17 @@ deps = ["ChainRulesCore", "IrrationalConstants", "LogExpFunctions", "OpenLibm_jl
 git-tree-sha1 = "d75bda01f8c31ebb72df80a46c88b25d1c79c56d"
 uuid = "276daf66-3868-5448-9aa4-cd146d93841b"
 version = "2.1.7"
+
+[[StaticArrays]]
+deps = ["LinearAlgebra", "Random", "StaticArraysCore", "Statistics"]
+git-tree-sha1 = "f86b3a049e5d05227b10e15dbb315c5b90f14988"
+uuid = "90137ffa-7385-5640-81b9-e52037218182"
+version = "1.5.9"
+
+[[StaticArraysCore]]
+git-tree-sha1 = "6b7ba252635a5eff6a0b0664a41ee140a1c9e72a"
+uuid = "1e83bf80-4336-4d27-bf5d-d5a4f845583c"
+version = "1.4.0"
 
 [[Statistics]]
 deps = ["LinearAlgebra", "SparseArrays"]
@@ -1025,20 +1069,19 @@ version = "1.4.1+0"
 """
 
 # ╔═╡ Cell order:
-# ╠═6c46a9d8-46a4-11ed-1645-b3a4dd15fc41
-# ╠═50f794b6-ecf2-427c-8777-5db71661fd9c
-# ╟─ea74687e-9017-4f0c-9d4c-e780e307a376
-# ╠═a9abe0d5-a449-4f59-a804-73b114db9950
-# ╟─1a308ad7-0f4e-47e0-b191-18e4e6eecfd7
-# ╠═1dd414f4-b468-40f9-bf7f-5e952f1fa9c8
-# ╠═34c9b7ec-b888-4426-92c7-5d776e269a0c
-# ╟─7e48fea3-bb7a-418a-a231-c66bc19891b4
-# ╠═6008c4ac-6c8f-4c0e-bd30-4901097713ce
-# ╟─0a9519ac-b39e-40fb-805e-60194ca5600d
-# ╠═8ae84c27-6c46-48b8-a537-85e1e0ad29ac
-# ╠═e723958a-202f-4b1c-b578-26bab69cd494
-# ╠═e805945f-0ac4-4adc-9561-aa5ecb1376fb
-# ╟─5bbad628-5579-4090-be90-2a062f4f2ad4
-# ╠═468b650c-08c0-49c1-aae8-f62a1e5164bd
+# ╠═bd84330e-4c41-11ed-1f68-2bbeae7faa88
+# ╠═ebba3928-b4a1-459c-bee3-1d345d91e454
+# ╟─889fdced-5b36-4369-a924-a9096d40e968
+# ╟─8a9779ad-6e9f-4a91-987c-dc73355b8f7c
+# ╟─3dcbc552-d179-4c95-b458-e20e63e132f7
+# ╟─2594b2fd-f426-4804-8aad-a4ce6eea790e
+# ╠═6376137d-66f5-407a-94cd-1ce283555b21
+# ╟─de415f11-b418-4597-99ec-897e8ed9a49c
+# ╠═2cbc1a61-9eca-4000-bd8c-fc667222c4c7
+# ╠═6d0bbb9d-f236-4309-9e9b-6338b267863b
+# ╟─6f7bd6b7-aada-4137-97fc-6d417e4b89b9
+# ╟─3eb6dfcb-def9-4df3-aec3-603627ee868c
+# ╠═1c0ef85b-4332-4608-bc1e-9e18817ca7eb
+# ╟─b57c7047-14d3-4899-ba77-af4583b0696a
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.12
+# v0.19.16
 
 using Markdown
 using InteractiveUtils
@@ -14,148 +14,134 @@ macro bind(def, element)
     end
 end
 
-# ╔═╡ bd84330e-4c41-11ed-1f68-2bbeae7faa88
-using LinearAlgebra
-
-# ╔═╡ ebba3928-b4a1-459c-bee3-1d345d91e454
+# ╔═╡ 7750d53d-d35e-4057-a599-086696b09264
 using Plots
 
-# ╔═╡ 889fdced-5b36-4369-a924-a9096d40e968
-md"""
-Want to "diagonalize", $ẋ=Ax$, so that the dynamics are decoupled
+# ╔═╡ f70b736e-b69e-4e97-b7e0-169c6fbefa2b
+using TaylorSeries
 
-e.g.
+# ╔═╡ b85d3050-41ac-11ed-17ba-2b8aced95773
+md""" 
+### Frst order ODE:
 
-$$\begin{bmatrix} ẋ_1 \\ ẋ_2 \\ ẋ_3 \end{bmatrix} = \begin{bmatrix} λ_1 & 0 & 0 \\ 0 & λ_2 & 0 \\ 0 & 0 & λ_3 \end{bmatrix} \begin{bmatrix} x_1 \\ x_2 \\ x_3 \end{bmatrix}$$
+$\frac{dx}{dt}=ẋ=\lambda x$
+#### Solution:
 
-Why?
-
-Because we already have a solution for a decoupled dynamical system in the form of:
-
-$$x(t)=e^{\lambda t}x(0)$$
-
-By doing a change of coordinates (linear transformation) $x=Tz$, we can achieve this diagonalization of A, and that's where the Eigenvalue and Eigenvectors come in!
-
-$$AT=TD$$
-
-where T has columns of eigenvectors of A stacked together, and D is the diagonal elements of the eigenvalues of A
+$x(t)=e^{\lambda t}x(0)$
 """
 
-# ╔═╡ 3dcbc552-d179-4c95-b458-e20e63e132f7
+# ╔═╡ 473732a9-6aa9-4d2b-8427-8d440d7108ce
 md"""
-### Visual interpretation of Eigenvalues and Eigenvectors
-
-Think of it as what vectors can be transformed by a matrix A, and the result of this transformation is only a scalar, λ, multiplication of that vector (no orientation change).
-
-$$Ax=λx$$
+### λ > 0
 """
 
-# ╔═╡ 2594b2fd-f426-4804-8aad-a4ce6eea790e
-theta_slider = @bind θ html"<input type=range min=0.0 max=6.2832 step=0.001 value=0.25>"
-
-# ╔═╡ 6376137d-66f5-407a-94cd-1ce283555b21
+# ╔═╡ 20a0b04b-960b-4659-b889-1400bf3ed033
 begin
-	A = [3. -1.; -1. 3.]
-	n = norm.(eachcol(A))
-	A = A ./n
-	x = [cos(θ),sin(θ)]
-	x′ = A*x
-
-	T = eigvecs(A)
-
-	if (abs(cos(θ)) > (abs(T[1,1]) - 0.025) && abs(cos(θ)) < (abs(T[1,1]) + 0.025))
-		print("You are on or close to an eigenvector!")
-	end
-	area(x1, y1, x2, y2, x, y) = Shape(x .+ [0,x2,x1+x2,x1], y .+ [0,y2,y1+y2,y1])
-	
-	plot(area(x[1], x[2], x′[1], x′[2], 0, 0), opacity=.5, label="determinant")
-
-	quiver!(zeros(4), zeros(4) ,
-		quiver=([ A[1,1], A[2,1], x[1], x′[1] ], [ A[1,2], A[2,2], x[2], x′[2] ]),    xlim = [-1, 1],
-		ylim = [-1, 1],
-		xlabel = "x1",
-		ylabel = "x2")
+	x0 = 1000
+	x(t; λ) = x0*exp(t*λ) 
+	plot(t -> x(t, λ=0.4), 0, 10, labels="x(t)")	
 end
 
-# ╔═╡ de415f11-b418-4597-99ec-897e8ed9a49c
+# ╔═╡ 05e6bd46-1d53-42ca-8b50-8503ffe10e4b
 md"""
-### Compute the eigen(values & vectors) in julia using the linearalgebra package
+### λ < 0
 """
 
-# ╔═╡ 2cbc1a61-9eca-4000-bd8c-fc667222c4c7
+# ╔═╡ 06637ce1-31f9-4dc4-bc2c-9e11d6b3f013
+plot(t -> x(t, λ=-0.4), 0, 10, labels="x(t)")	
+
+
+# ╔═╡ 54cf82d6-6190-4d70-ba67-035ad7db3607
+md"""
+### What is the Euler number "e"?
+#### Think of it as an interest rate that is compounded in an infinitesimally small amount of time.
+"""
+
+# ╔═╡ b5518567-b553-4be9-837a-50300b803980
+n_slider = @bind n html"<input type=range min=1 max=10000 step=10 value=1>"
+
+# ╔═╡ c160fa3b-15e8-462c-b433-efd0b5b84b2a
 begin
-	#T = eigvecs(A)
-	λ = eigvals(A)
-	D = zeros(length(λ), length(λ))
-	D[1,1] = λ[1]
-	D[2,2] = λ[2]
+	r = 1.0
+	#x0 = 1000
+	x1 = x0*(1 + r/n)^n 
 end
 
-# ╔═╡ 6d0bbb9d-f236-4309-9e9b-6338b267863b
-T
+# ╔═╡ 04822c9a-4f1d-4ab2-b151-ef0ec4a85c99
+x0*exp(r)
 
-# ╔═╡ 6f7bd6b7-aada-4137-97fc-6d417e4b89b9
+# ╔═╡ 41fb4c25-61ef-4bd2-be2b-defe8d521803
 md"""
-### Stability analysis
+$e^r = \lim\limits_{n \to \infty} (1 + \frac{r}{n})^n$
+
 """
 
-# ╔═╡ 3eb6dfcb-def9-4df3-aec3-603627ee868c
-c_slider = @bind c html"<input type=range min=1.0 max=40.0 step=1.0 value=12.0>"
+# ╔═╡ ad594a53-496e-45a2-9327-6bc1c816c82d
+md"""
+### "e" can also be derived with the power series
+$x(t)=λ(c_0 + c_1t + c_2t^2 + c_3t^3 + ... c_nt^n)$
+$ẋ(t)=c_1 + 2c_2t + 3c_3t^2 + ... nc_nt^{n-1}$
+### and equate coefficients and find $e^{\lambda t}$:
+$e^{λt}=1 + λt + \frac{λ^2t^2}{2!} + \frac{λ^3t^3}{3!} + ...$
+"""
 
-# ╔═╡ 1c0ef85b-4332-4608-bc1e-9e18817ca7eb
+# ╔═╡ 55cf8cb4-2b89-4630-8e07-989b3f4785ed
+power_slider = @bind power html"<input type=range min=0 max=15 step=1 value=1>"
+
+# ╔═╡ d4f9194b-c5c5-4477-89b6-059c055784a3
 begin
-	import GR
-	gr()
-	function f(X)
-		x1, x2 = X
-		return [3*x1 - x2, -x1 + 3*x2]
-	end
+	t_ser = Taylor1(Float64, power)
+	e_approx = exp(t_ser)
+	plot(t -> e_approx(t), 0, 10, labels="Taylor $power")
+	plot!(t -> exp(t), 0, 10, labels="eᵗ")
 
-	xgr = range(-1.5, 1.5; length= c)
-	ygr = range(-1.5, 1.5; length= c)
-	
-	X = ones(c)' .* ygr
-	Y = xgr' .* ones(c)
-	u = zeros(c,c)
-	v = zeros(c,c)
-	for i in 1:c
-		for j in 1:c
-			xij = X[i,j]
-			yij = Y[i,j]
-			xprime = f([xij,yij])
-			u[i,j] = xprime[1]
-			v[i,j] = xprime[2]
-
-		end
-	end
-
-	xall = collect(range(-10, 10, length= 100))
-
-	#norm = (f([xij,yij], 0).^2 .+ 1.0^2).^0.5;
-	#U = c*ones(size(X))./norm;
-	#V = c*f(X, Y)./norm; 
-
-	quiver(X, Y, quiver=(u, v), aspect_ratio=:equal, color="red", xlim = [-8, 8],
-		ylim = [-8, 8], xlabel="x1", ylabel="x2")
-	plot!(xall, T[1,1]/T[1,2]*xall, label = "λ₁", legend = :topright, color="black")
-	plot!(xall, T[2,1]/T[2,2]*xall, label = "λ₂", legend = :topright, color="blue")
 end
 
-# ╔═╡ b57c7047-14d3-4899-ba77-af4583b0696a
+# ╔═╡ a8d1fd49-c301-4a55-984c-c734a1ef5628
 md"""
-As you can visualize in the phase portrait, the vectors are pointing outward because the eigenvalues are positive. As a result, the dynamical system is unstable (vectors don't shrink to 0).
+### Maclaurin Series: A Maclaurin series is a Taylor series expansion of a function about 0
+$$f(x) = f(0) + f'(0)x + \frac{f''(0)}{2!}x^2 + \frac{f'''(0)}{3!}x^3 + ...$$
 """
+
+# ╔═╡ 2668016c-1d10-417f-831b-59d21f829cca
+begin
+	sin_approx = sin(t_ser)
+	plot(t -> sin_approx(t), -8, 8, labels="Taylor $power")
+	plot!(t -> sin(t), -8, 8, labels="sin(t)")
+	plot!(ylims=(-1.5,1.5))
+
+end
+
+# ╔═╡ b017c95a-f8bd-49f9-8035-7949d8c3f833
+md"""
+### Taylor series expansion of a function $f(x)$ about a point $\hat{x}$
+$$f(\hat{x} + \delta \hat{x}) = f(\hat{x}) + f'(\hat{x})\delta \hat{x} + \frac{f''(\hat{x})}{2!}\delta \hat{x}^2 + \frac{f'''(\hat{x})}{3!}\delta \hat{x}^3 + ...$$
+where $\delta \hat{x} = x - \hat{x}$
+It can be rewritten as
+$$f(x)|_{x=\hat{x}} = f(\hat{x}) + f'(\hat{x})(x - \hat{x}) + \frac{f''(\hat{x})}{2!}(x - \hat{x})^2 + \frac{f'''(\hat{x})}{3!}(x - \hat{x})^3 + ...$$
+"""
+
+# ╔═╡ edf831f4-ff3a-4033-9c3f-3d1c310709ba
+x̂_slider = @bind x̂ html"<input type=range min=-6 max=6 step=0.1 value=1>"
+
+# ╔═╡ d43dc686-248c-4cd2-9d58-8290fc22cdf5
+begin
+	# sin(x) 2nd order Taylor expansion about x̂
+	#x̂ = 1.0
+	f(x,x̂) = sin(x̂) + cos(x̂)*(x - x̂) - sin(x̂)*(x - x̂)^2/2
+	plot(x -> sin(x), -8, 8, labels="sin(x)", xlim=(-8,8), ylim=(-2,2))
+	plot!(x -> f(x, x̂), labels="Taylor @ x̂ = $x̂")
+end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
-GR = "28b8d3ca-fb5f-59d9-8090-bfdbd6d07a71"
-LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+TaylorSeries = "6aa5eb33-94cf-58f4-a9d0-e4b2c4fc25ea"
 
 [compat]
-GR = "~0.69.5"
-Plots = "~1.35.3"
+Plots = "~1.34.3"
+TaylorSeries = "~0.12.2"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -232,24 +218,23 @@ version = "0.12.8"
 
 [[Compat]]
 deps = ["Dates", "LinearAlgebra", "UUIDs"]
-git-tree-sha1 = "3ca828fe1b75fa84b021a7860bd039eaea84d2f2"
+git-tree-sha1 = "5856d3031cdb1f3b2b6340dfdc66b6d9a149a374"
 uuid = "34da2185-b29b-5c13-b0c7-acf172513d20"
-version = "4.3.0"
+version = "4.2.0"
 
 [[CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
 
 [[Contour]]
-deps = ["StaticArrays"]
-git-tree-sha1 = "9f02045d934dc030edad45944ea80dbd1f0ebea7"
+git-tree-sha1 = "d05d9e7b7aedff4e5b51a029dced05cfb6125781"
 uuid = "d38c429a-6771-53c6-b99e-75d170b6e991"
-version = "0.5.7"
+version = "0.6.2"
 
 [[DataAPI]]
-git-tree-sha1 = "46d2680e618f8abd007bce0c3026cb0c4a8f2032"
+git-tree-sha1 = "1106fa7e1256b402a86a8e7b15c00c85036fef49"
 uuid = "9a962f9c-6df0-11e9-0e5d-c546b8b5ee8a"
-version = "1.12.0"
+version = "1.11.0"
 
 [[DataStructures]]
 deps = ["Compat", "InteractiveUtils", "OrderedCollections"]
@@ -267,9 +252,9 @@ uuid = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 
 [[DocStringExtensions]]
 deps = ["LibGit2"]
-git-tree-sha1 = "b19534d1895d702889b219c382a6e18010797f0b"
+git-tree-sha1 = "5158c2b41018c5f7eb1470d558127ac274eca0c9"
 uuid = "ffbed154-4ef7-542d-bbb7-c09d3a79fcae"
-version = "0.8.6"
+version = "0.9.1"
 
 [[Downloads]]
 deps = ["ArgTools", "LibCURL", "NetworkOptions"]
@@ -331,9 +316,9 @@ version = "3.3.8+0"
 
 [[GR]]
 deps = ["Base64", "DelimitedFiles", "GR_jll", "HTTP", "JSON", "Libdl", "LinearAlgebra", "Pkg", "Preferences", "Printf", "Random", "Serialization", "Sockets", "Test", "UUIDs"]
-git-tree-sha1 = "00a9d4abadc05b9476e937a5557fcce476b9e547"
+git-tree-sha1 = "2c5ab2c1e683d991300b125b9b365cb0a0035d88"
 uuid = "28b8d3ca-fb5f-59d9-8090-bfdbd6d07a71"
-version = "0.69.5"
+version = "0.69.1"
 
 [[GR_jll]]
 deps = ["Artifacts", "Bzip2_jll", "Cairo_jll", "FFMPEG_jll", "Fontconfig_jll", "GLFW_jll", "JLLWrappers", "JpegTurbo_jll", "Libdl", "Libtiff_jll", "Pixman_jll", "Pkg", "Qt5Base_jll", "Zlib_jll", "libpng_jll"]
@@ -366,9 +351,9 @@ version = "1.0.2"
 
 [[HTTP]]
 deps = ["Base64", "CodecZlib", "Dates", "IniFile", "Logging", "LoggingExtras", "MbedTLS", "NetworkOptions", "OpenSSL", "Random", "SimpleBufferStream", "Sockets", "URIs", "UUIDs"]
-git-tree-sha1 = "e8c58d5f03b9d9eb9ed7067a2f34c7c371ab130b"
+git-tree-sha1 = "4abede886fcba15cd5fd041fef776b230d004cee"
 uuid = "cd3eb016-35fb-5094-929b-558a96fad6f3"
-version = "1.4.1"
+version = "1.4.0"
 
 [[HarfBuzz_jll]]
 deps = ["Artifacts", "Cairo_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "Graphite2_jll", "JLLWrappers", "Libdl", "Libffi_jll", "Pkg"]
@@ -387,9 +372,9 @@ uuid = "b77e0a4c-d291-57a0-90e8-8db25a27a240"
 
 [[InverseFunctions]]
 deps = ["Test"]
-git-tree-sha1 = "49510dfcb407e572524ba94aeae2fced1f3feb0f"
+git-tree-sha1 = "b3364212fb5d870f724876ffcd34dd8ec6d98918"
 uuid = "3587e190-3f89-42d0-90ee-14403ec27112"
-version = "0.1.8"
+version = "0.1.7"
 
 [[IrrationalConstants]]
 git-tree-sha1 = "7fd44fd4ff43fc60815f8e764c0f352b83c49151"
@@ -537,9 +522,9 @@ version = "0.4.9"
 
 [[MacroTools]]
 deps = ["Markdown", "Random"]
-git-tree-sha1 = "42324d08725e200c23d4dfb549e0d5d89dede2d2"
+git-tree-sha1 = "3d3e902b31198a27340d0bf00d6ac452866021cf"
 uuid = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
-version = "0.5.10"
+version = "0.5.9"
 
 [[Markdown]]
 deps = ["Base64"]
@@ -593,9 +578,9 @@ uuid = "05823500-19ac-5b8b-9628-191a04bc5112"
 
 [[OpenSSL]]
 deps = ["BitFlags", "Dates", "MozillaCACerts_jll", "OpenSSL_jll", "Sockets"]
-git-tree-sha1 = "ebe81469e9d7b471d7ddb611d9e147ea16de0add"
+git-tree-sha1 = "02be9f845cb58c2d6029a6d5f67f4e0af3237814"
 uuid = "4d8831e6-92b7-49fb-bdf8-b643e874388c"
-version = "1.2.1"
+version = "1.1.3"
 
 [[OpenSSL_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -626,9 +611,9 @@ uuid = "efcefdf7-47ab-520b-bdef-62a2eaa19f15"
 
 [[Parsers]]
 deps = ["Dates"]
-git-tree-sha1 = "6c01a9b494f6d2a9fc180a08b182fcb06f0958a0"
+git-tree-sha1 = "3d5bf43e3e8b412656404ed9466f1dcbf7c50269"
 uuid = "69de0a69-1ddd-5017-9359-2bf0b02dc9f0"
-version = "2.4.2"
+version = "2.4.0"
 
 [[Pipe]]
 git-tree-sha1 = "6842804e7867b115ca9de748a0cf6b364523c16d"
@@ -647,9 +632,9 @@ uuid = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 
 [[PlotThemes]]
 deps = ["PlotUtils", "Statistics"]
-git-tree-sha1 = "1f03a2d339f42dca4a4da149c7e15e9b896ad899"
+git-tree-sha1 = "8162b2f8547bc23876edd0c5181b27702ae58dce"
 uuid = "ccf2f8ad-2431-5c83-bf29-c5338b663b6a"
-version = "3.1.0"
+version = "3.0.0"
 
 [[PlotUtils]]
 deps = ["ColorSchemes", "Colors", "Dates", "Printf", "Random", "Reexport", "SnoopPrecompile", "Statistics"]
@@ -659,9 +644,9 @@ version = "1.3.1"
 
 [[Plots]]
 deps = ["Base64", "Contour", "Dates", "Downloads", "FFMPEG", "FixedPointNumbers", "GR", "JLFzf", "JSON", "LaTeXStrings", "Latexify", "LinearAlgebra", "Measures", "NaNMath", "Pkg", "PlotThemes", "PlotUtils", "Printf", "REPL", "Random", "RecipesBase", "RecipesPipeline", "Reexport", "RelocatableFolders", "Requires", "Scratch", "Showoff", "SnoopPrecompile", "SparseArrays", "Statistics", "StatsBase", "UUIDs", "UnicodeFun", "Unzip"]
-git-tree-sha1 = "524d9ff1b2f4473fef59678c06f9f77160a204b1"
+git-tree-sha1 = "fae3b66e343703f8f89b854a4da40bce0f84da22"
 uuid = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
-version = "1.35.3"
+version = "1.34.3"
 
 [[Preferences]]
 deps = ["TOML"]
@@ -675,9 +660,9 @@ uuid = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 
 [[Qt5Base_jll]]
 deps = ["Artifacts", "CompilerSupportLibraries_jll", "Fontconfig_jll", "Glib_jll", "JLLWrappers", "Libdl", "Libglvnd_jll", "OpenSSL_jll", "Pkg", "Xorg_libXext_jll", "Xorg_libxcb_jll", "Xorg_xcb_util_image_jll", "Xorg_xcb_util_keysyms_jll", "Xorg_xcb_util_renderutil_jll", "Xorg_xcb_util_wm_jll", "Zlib_jll", "xkbcommon_jll"]
-git-tree-sha1 = "c6c0f690d0cc7caddb74cef7aa847b824a16b256"
+git-tree-sha1 = "0c03844e2231e12fda4d0086fd7cbe4098ee8dc5"
 uuid = "ea2cea3b-5b76-57ae-a6ef-0a8af62496e1"
-version = "5.15.3+1"
+version = "5.15.3+2"
 
 [[REPL]]
 deps = ["InteractiveUtils", "Markdown", "Sockets", "Unicode"]
@@ -694,10 +679,10 @@ uuid = "3cdcf5f2-1ef4-517c-9805-6587b60abb01"
 version = "1.3.0"
 
 [[RecipesPipeline]]
-deps = ["Dates", "NaNMath", "PlotUtils", "RecipesBase", "SnoopPrecompile"]
-git-tree-sha1 = "9b1c0c8e9188950e66fc28f40bfe0f8aac311fe0"
+deps = ["Dates", "NaNMath", "PlotUtils", "RecipesBase"]
+git-tree-sha1 = "e7eac76a958f8664f2718508435d058168c7953d"
 uuid = "01d81517-befc-4cb6-b9ec-a95719d0359c"
-version = "0.6.7"
+version = "0.6.3"
 
 [[Reexport]]
 git-tree-sha1 = "45e428421666073eab6f2da5c9d310d99bb12f9b"
@@ -763,17 +748,6 @@ git-tree-sha1 = "d75bda01f8c31ebb72df80a46c88b25d1c79c56d"
 uuid = "276daf66-3868-5448-9aa4-cd146d93841b"
 version = "2.1.7"
 
-[[StaticArrays]]
-deps = ["LinearAlgebra", "Random", "StaticArraysCore", "Statistics"]
-git-tree-sha1 = "f86b3a049e5d05227b10e15dbb315c5b90f14988"
-uuid = "90137ffa-7385-5640-81b9-e52037218182"
-version = "1.5.9"
-
-[[StaticArraysCore]]
-git-tree-sha1 = "6b7ba252635a5eff6a0b0664a41ee140a1c9e72a"
-uuid = "1e83bf80-4336-4d27-bf5d-d5a4f845583c"
-version = "1.4.0"
-
 [[Statistics]]
 deps = ["LinearAlgebra", "SparseArrays"]
 uuid = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
@@ -797,6 +771,12 @@ uuid = "fa267f1f-6049-4f14-aa54-33bafae1ed76"
 [[Tar]]
 deps = ["ArgTools", "SHA"]
 uuid = "a4e569a6-e804-4fa4-b0f3-eef7a1d5b13e"
+
+[[TaylorSeries]]
+deps = ["LinearAlgebra", "Markdown", "Requires", "SparseArrays"]
+git-tree-sha1 = "87baeec9ad6273ed8040a93fbbbaa039fa955f1f"
+uuid = "6aa5eb33-94cf-58f4-a9d0-e4b2c4fc25ea"
+version = "0.12.2"
 
 [[TensorCore]]
 deps = ["LinearAlgebra"]
@@ -1061,18 +1041,25 @@ version = "1.4.1+0"
 """
 
 # ╔═╡ Cell order:
-# ╠═bd84330e-4c41-11ed-1f68-2bbeae7faa88
-# ╠═ebba3928-b4a1-459c-bee3-1d345d91e454
-# ╟─889fdced-5b36-4369-a924-a9096d40e968
-# ╟─3dcbc552-d179-4c95-b458-e20e63e132f7
-# ╟─2594b2fd-f426-4804-8aad-a4ce6eea790e
-# ╠═6376137d-66f5-407a-94cd-1ce283555b21
-# ╟─de415f11-b418-4597-99ec-897e8ed9a49c
-# ╠═2cbc1a61-9eca-4000-bd8c-fc667222c4c7
-# ╠═6d0bbb9d-f236-4309-9e9b-6338b267863b
-# ╟─6f7bd6b7-aada-4137-97fc-6d417e4b89b9
-# ╟─3eb6dfcb-def9-4df3-aec3-603627ee868c
-# ╠═1c0ef85b-4332-4608-bc1e-9e18817ca7eb
-# ╟─b57c7047-14d3-4899-ba77-af4583b0696a
+# ╠═7750d53d-d35e-4057-a599-086696b09264
+# ╠═f70b736e-b69e-4e97-b7e0-169c6fbefa2b
+# ╟─b85d3050-41ac-11ed-17ba-2b8aced95773
+# ╟─473732a9-6aa9-4d2b-8427-8d440d7108ce
+# ╠═20a0b04b-960b-4659-b889-1400bf3ed033
+# ╟─05e6bd46-1d53-42ca-8b50-8503ffe10e4b
+# ╠═06637ce1-31f9-4dc4-bc2c-9e11d6b3f013
+# ╟─54cf82d6-6190-4d70-ba67-035ad7db3607
+# ╠═c160fa3b-15e8-462c-b433-efd0b5b84b2a
+# ╠═04822c9a-4f1d-4ab2-b151-ef0ec4a85c99
+# ╠═b5518567-b553-4be9-837a-50300b803980
+# ╟─41fb4c25-61ef-4bd2-be2b-defe8d521803
+# ╟─ad594a53-496e-45a2-9327-6bc1c816c82d
+# ╠═d4f9194b-c5c5-4477-89b6-059c055784a3
+# ╟─55cf8cb4-2b89-4630-8e07-989b3f4785ed
+# ╟─a8d1fd49-c301-4a55-984c-c734a1ef5628
+# ╠═2668016c-1d10-417f-831b-59d21f829cca
+# ╟─b017c95a-f8bd-49f9-8035-7949d8c3f833
+# ╠═d43dc686-248c-4cd2-9d58-8290fc22cdf5
+# ╠═edf831f4-ff3a-4033-9c3f-3d1c310709ba
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

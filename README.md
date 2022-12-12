@@ -1,6 +1,8 @@
 # ME 564 Lecture examples in Julia
-
+## Numerical Integrators
 ![Alt Text](/assets/num_ODE.gif)
+## Phase Portrait
+![Alt Text](/assets/phase_portrait.png)
 
 ## Prerequistes 
 Install Julia on your system (recommended v1.6.7): https://julialang.org/downloads/ 
